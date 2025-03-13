@@ -1,0 +1,192 @@
+package com.mycompany.notepad;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+public class Notepad {
+    private JFrame frame;
+    private JTextArea textArea;
+    private JFileChooser fileChooser;
+    private File currentFile;
+    private JLabel statusLabel;
+    private int currentRow = 1;
+    private int currentColumn = 1;
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new Notepad().createAndShowGUI());
+    }
+
+    public void createAndShowGUI() {
+        frame = new JFrame("Notepad");
+        textArea = new JTextArea();
+        fileChooser = new JFileChooser();
+        statusLabel = new JLabel("Chars: 0 | Rows: 1 | Cols: 1 | Lines: 1 | Words: 0");
+
+        // Setup the text area
+        textArea.setFont(new Font("Arial", Font.PLAIN, 14));
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+
+        // Add a listener to update word and line counts as the user types
+        textArea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                updateStatusBar();
+            }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                updateStatusBar();
+            }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                updateStatusBar();
+            }
+        });
+
+        // Add a listener to update column and row counts when the cursor moves
+        textArea.addCaretListener(e -> updateCursorPosition());
+
+        // Setup the scroll pane
+        JScrollPane scrollPane = new JScrollPane(textArea);
+
+        // Setup the menu bar
+        JMenuBar menuBar = new JMenuBar();
+
+        // File menu
+        JMenu fileMenu = new JMenu("File");
+        JMenuItem newItem = new JMenuItem("New");
+        JMenuItem openItem = new JMenuItem("Open");
+        JMenuItem saveItem = new JMenuItem("Save");
+        JMenuItem exitItem = new JMenuItem("Exit");
+
+        fileMenu.add(newItem);
+        fileMenu.add(openItem);
+        fileMenu.add(saveItem);
+        fileMenu.addSeparator();
+        fileMenu.add(exitItem);
+
+        // Edit menu
+        JMenu editMenu = new JMenu("Edit");
+        JMenuItem cutItem = new JMenuItem("Cut");
+        JMenuItem copyItem = new JMenuItem("Copy");
+        JMenuItem pasteItem = new JMenuItem("Paste");
+
+        editMenu.add(cutItem);
+        editMenu.add(copyItem);
+        editMenu.add(pasteItem);
+
+        // View menu
+        JMenu viewMenu = new JMenu("View");
+        JMenuItem wordWrapItem = new JCheckBoxMenuItem("Word Wrap", true);
+        viewMenu.add(wordWrapItem);
+
+        // Add action listeners to menus
+        newItem.addActionListener(e -> newFile());
+        openItem.addActionListener(e -> openFile());
+        saveItem.addActionListener(e -> saveFile());
+        exitItem.addActionListener(e -> System.exit(0));
+
+        cutItem.addActionListener(e -> textArea.cut());
+        copyItem.addActionListener(e -> textArea.copy());
+        pasteItem.addActionListener(e -> textArea.paste());
+
+        // Toggle word wrap
+        wordWrapItem.addActionListener(e -> textArea.setLineWrap(wordWrapItem.isSelected()));
+
+        menuBar.add(fileMenu);
+        menuBar.add(editMenu);
+        menuBar.add(viewMenu);
+
+        // Set the menu bar to the frame
+        frame.setJMenuBar(menuBar);
+
+        // Bottom status bar
+        JPanel statusBar = new JPanel(new BorderLayout());
+        statusBar.setBorder(BorderFactory.createEtchedBorder());
+        statusBar.add(statusLabel, BorderLayout.WEST);
+
+        // Configure frame
+        frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+        frame.getContentPane().add(statusBar, BorderLayout.SOUTH);
+        frame.setSize(600, 400);
+        frame.setLocationRelativeTo(null);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+    }
+
+    private void newFile() {
+        textArea.setText("");
+        currentFile = null;
+        updateStatusBar();
+    }
+
+    private void openFile() {
+        fileChooser.setDialogTitle("Open File");
+        int returnValue = fileChooser.showOpenDialog(frame);
+
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                textArea.setText("");
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    textArea.append(line + "\n");
+                }
+                currentFile = file;
+                updateStatusBar();
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame, "Error opening file", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void saveFile() {
+        if (currentFile == null) {
+            fileChooser.setDialogTitle("Save File");
+            int returnValue = fileChooser.showSaveDialog(frame);
+
+            if (returnValue == JFileChooser.APPROVE_OPTION) {
+                currentFile = fileChooser.getSelectedFile();
+            } else {
+                return;
+            }
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(currentFile))) {
+            writer.write(textArea.getText());
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(frame, "Error saving file", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Update the status bar with character count, line count, word count, row and column count
+    private void updateStatusBar() {
+        String text = textArea.getText();
+        int charCount = text.length();  // Character count
+        int lineCount = text.split("\n").length;  // Line count
+        int wordCount = countWords(text);  // Word count
+        statusLabel.setText("Chars: " + charCount + " | Rows: " + lineCount + " | Cols: " + currentColumn + " | Lines: " + lineCount + " | Words: " + wordCount);
+    }
+
+    // Helper method to count words in the text
+    private int countWords(String text) {
+        String[] words = text.trim().split("\\s+");
+        return words.length == 1 && words[0].equals("") ? 0 : words.length;
+    }
+
+    // Update the cursor's row and column position in the status bar
+    private void updateCursorPosition() {
+        try {
+            // Get the caret position and calculate row and column
+            int caretPosition = textArea.getCaretPosition();
+            int row = textArea.getLineOfOffset(caretPosition) + 1;  // Line number (1-based)
+            int column = caretPosition - textArea.getLineStartOffset(row - 1) + 1;  // Column number (1-based)
+            currentRow = row;
+            currentColumn = column;
+        } catch (Exception e) {
+            currentRow = 1;
+            currentColumn = 1;
+        }
+        updateStatusBar();  // Update status bar with new position
+    }
+}
