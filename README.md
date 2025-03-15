@@ -28,7 +28,7 @@ A simple Notepad application built using Java Swing, offering basic text editing
 1. **Clone the Repository:**
    You can clone the project repository to your local machine:
    ```bash
-   git clone https://github.com/yourusername/notepad.git
+   git clone https://github.com/nehamurthy2005/notepad.git
    ```
 
 2. **Compile the Java Code:**
