@@ -98,7 +98,7 @@ If you'd like to contribute to this project, feel free to open a pull request. Y
 1. Fork the repository.
 2. Clone your fork:
    ```bash
-   git clone https://github.com/yourusername/notepad.git
+   git clone https://github.com/nehamurthy2005/notepad.git
    ```
 3. Create a new branch:
    ```bash
